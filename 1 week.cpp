@@ -120,6 +120,12 @@ void EnsureGuiPidsCapacity(int needed) {
     guiPidsCapacity = newCapacity;
 }
 
+void AddPidToGuiArray(unsigned long pid) {
+    for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return;
+    EnsureGuiPidsCapacity(guiPidsCount + 1);
+    guiPids[guiPidsCount++] = pid;
+}
+
 void ClearGuiArray() {
     delete[] guiPids;
     guiPids = nullptr;
