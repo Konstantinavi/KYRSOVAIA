@@ -28,16 +28,32 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     for (int i = 0; i < elementsToCopy; i++) {
         if (cpuHistoryList != nullptr) {
             newCpuHistory[i] = cpuHistoryList[i];
+                    if (processList != nullptr) {
+            newProcessList[i] = processList[i]; 
+            newProcessList[i].name = nullptr;
+            newProcessList[i].statusStr = nullptr;
+
+            if (processList[i].name != nullptr) {
+                size_t len = wcslen(processList[i].name) + 1;
+                newProcessList[i].name = new(std::nothrow) wchar_t[len];
+                if (newProcessList[i].name) wcscpy_s(newProcessList[i].name, len, processList[i].name);
+            }
+            if (processList[i].statusStr != nullptr) {
+                size_t len = wcslen(processList[i].statusStr) + 1;
+                newProcessList[i].statusStr = new(std::nothrow) wchar_t[len];
+                if (newProcessList[i].statusStr) wcscpy_s(newProcessList[i].statusStr, len, processList[i].statusStr);
+            }
+        }
         }
     }
-
-    delete[] processList;
-    delete[] cpuHistoryList;
-
-    processList = newProcessList;
-    cpuHistoryList = newCpuHistory;
-    currentCapacity = newCapacity;
-    cpuHistoryCapacity = newCapacity; 
+       if (processList != nullptr) {
+        for (int i = 0; i < elementsToCopy; i++) {
+            delete[] processList[i].name;
+            delete[] processList[i].statusStr;
+        }
+        delete[] processList;
+    }
+    delete[] cpuHistoryList; 
 }
 
 
