@@ -5,6 +5,8 @@
 #include <psapi.h>
 #include <string>
 
+enum ProcCat { CAT_APP, CAT_BACKGROUND, CAT_WINDOWS };
+
 struct ProcessInfo {
     unsigned long pid;
     wchar_t* name = nullptr;
