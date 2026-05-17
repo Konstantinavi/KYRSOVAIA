@@ -24,6 +24,26 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     ProcessInfo* newProcessList = new ProcessInfo[newCapacity]();
     ProcessCpuTime* newCpuHistory = new ProcessCpuTime[newCapacity]();
 
+        try {
+        newProcessList = new ProcessInfo[newCapacity]();
+        newCpuHistory = new ProcessCpuTime[newCapacity]();
+    }
+    catch (const std::bad_alloc&) {
+        delete[] newProcessList; 
+        delete[] newCpuHistory;
+        
+        newCapacity = needed;
+        try {
+            newProcessList = new ProcessInfo[newCapacity]();
+            newCpuHistory = new ProcessCpuTime[newCapacity]();
+            std::wcerr << L"ПРЕДУПРЕЖДЕНИЕ: Мало памяти. Выделено впритык: " << newCapacity << std::endl;
+        }
+        catch (const std::bad_alloc& e) {
+            std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА! Системная ошибка: " << e.what() << std::endl;
+            exit(1);
+        }
+    }
+
     int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
     for (int i = 0; i < elementsToCopy; i++) {
         if (cpuHistoryList != nullptr) {
