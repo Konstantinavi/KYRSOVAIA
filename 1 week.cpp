@@ -14,6 +14,33 @@ void ClearProcessStrings(ProcessInfo* processList, int count) {
     }
 }
 
+void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHistoryList,
+    int needed, int& currentCapacity) {
+    if (needed <= currentCapacity) return;
+
+    int newCapacity = (currentCapacity == 0) ? 100 : currentCapacity * 2;
+    while (newCapacity < needed) newCapacity *= 2;
+
+    ProcessInfo* newProcessList = new ProcessInfo[newCapacity]();
+    ProcessCpuTime* newCpuHistory = new ProcessCpuTime[newCapacity]();
+
+    int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
+    for (int i = 0; i < elementsToCopy; i++) {
+        if (cpuHistoryList != nullptr) {
+            newCpuHistory[i] = cpuHistoryList[i];
+        }
+    }
+
+    delete[] processList;
+    delete[] cpuHistoryList;
+
+    processList = newProcessList;
+    cpuHistoryList = newCpuHistory;
+    currentCapacity = newCapacity;
+    cpuHistoryCapacity = newCapacity; 
+}
+
+
 int main() {
   return 0;
 }
