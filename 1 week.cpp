@@ -21,10 +21,10 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     int newCapacity = (currentCapacity == 0) ? 100 : currentCapacity * 2;
     while (newCapacity < needed) newCapacity *= 2;
 
-    ProcessInfo* newProcessList = new ProcessInfo[newCapacity]();
-    ProcessCpuTime* newCpuHistory = new ProcessCpuTime[newCapacity]();
+    ProcessInfo* newProcessList = nullptr;
+    ProcessCpuTime* newCpuHistory = nullptr;
 
-        try {
+    try {
         newProcessList = new ProcessInfo[newCapacity]();
         newCpuHistory = new ProcessCpuTime[newCapacity]();
     }
@@ -39,6 +39,8 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
             std::wcerr << L"ПРЕДУПРЕЖДЕНИЕ: Мало памяти. Выделено впритык: " << newCapacity << std::endl;
         }
         catch (const std::bad_alloc& e) {
+            delete[] newProcessList; 
+            delete[] newCpuHistory;
             std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА! Системная ошибка: " << e.what() << std::endl;
             exit(1);
         }
@@ -47,9 +49,12 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
     for (int i = 0; i < elementsToCopy; i++) {
         if (cpuHistoryList != nullptr) {
-            newCpuHistory[i] = cpuHistoryList[i];
-                    if (processList != nullptr) {
+            newCpuHistory[i] = cpuHistoryList[i]; 
+        }
+
+        if (processList != nullptr) {
             newProcessList[i] = processList[i]; 
+            
             newProcessList[i].name = nullptr;
             newProcessList[i].statusStr = nullptr;
 
@@ -64,17 +69,23 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
                 if (newProcessList[i].statusStr) wcscpy_s(newProcessList[i].statusStr, len, processList[i].statusStr);
             }
         }
-        }
     }
-       if (processList != nullptr) {
+
+    if (processList != nullptr) {
         for (int i = 0; i < elementsToCopy; i++) {
             delete[] processList[i].name;
             delete[] processList[i].statusStr;
         }
         delete[] processList;
     }
-    delete[] cpuHistoryList; 
+    delete[] cpuHistoryList;
+
+    processList = newProcessList;
+    cpuHistoryList = newCpuHistory;
+    currentCapacity = newCapacity;
+    cpuHistoryCapacity = newCapacity; 
 }
+
 
 
 int main() {
