@@ -1,5 +1,9 @@
 #include "Common.h"
 
+unsigned long* guiPids = nullptr;
+int guiPidsCapacity = 0;
+int guiPidsCount = 0;
+
 void ClearProcessStrings(ProcessInfo* processList, int count) {
     if (processList == nullptr) return;
     for (int i = 0; i < count; i++) {
@@ -86,7 +90,12 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     cpuHistoryCapacity = newCapacity; 
 }
 
-
+void ClearGuiArray() {
+    delete[] guiPids;
+    guiPids = nullptr;
+    guiPidsCount = 0;
+    guiPidsCapacity = 0;
+}
 
 int main() {
   return 0;
