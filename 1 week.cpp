@@ -126,6 +126,11 @@ void AddPidToGuiArray(unsigned long pid) {
     guiPids[guiPidsCount++] = pid;
 }
 
+bool IsPidInGuiArray(unsigned long pid) {
+    for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return true;
+    return false;
+}
+
 void ClearGuiArray() {
     delete[] guiPids;
     guiPids = nullptr;
