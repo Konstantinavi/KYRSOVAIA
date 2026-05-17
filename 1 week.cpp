@@ -90,6 +90,36 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
     cpuHistoryCapacity = newCapacity; 
 }
 
+void EnsureGuiPidsCapacity(int needed) {
+    if (needed <= guiPidsCapacity) return;
+
+    int newCapacity = (guiPidsCapacity == 0) ? 100 : guiPidsCapacity * 2;
+    while (newCapacity < needed) newCapacity *= 2;
+
+    unsigned long* newArray = nullptr;
+    try {
+        newArray = new unsigned long[newCapacity];
+    }
+    catch (const std::bad_alloc&) {
+        newCapacity = needed;
+        try {
+            newArray = new unsigned long[newCapacity];
+        }
+        catch (const std::bad_alloc&) {
+            std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА: Недостаточно памяти для GUI PIDs!" << std::endl;
+            exit(1);
+        }
+    }
+
+    for (int i = 0; i < guiPidsCount; i++) {
+        newArray[i] = guiPids[i];
+    }
+
+    delete[] guiPids;
+    guiPids = newArray;
+    guiPidsCapacity = newCapacity;
+}
+
 void ClearGuiArray() {
     delete[] guiPids;
     guiPids = nullptr;
