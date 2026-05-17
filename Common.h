@@ -30,3 +30,4 @@ struct ProcessCpuTime {
     bool isActive;
 };
 
+void ClearProcessStrings(ProcessInfo* processList, int count);
