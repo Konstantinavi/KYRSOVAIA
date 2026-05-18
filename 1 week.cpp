@@ -4,6 +4,12 @@ struct ProcessCpuHistory {
     unsigned long long lastKernel;
     unsigned long long lastUser;
 };
+struct DiskStats {
+    unsigned long long lastRead;
+    unsigned long long lastWrite;
+    unsigned long long lastTime;
+    bool initialized;
+};
 ProcessCpuHistory* cpuHistory = nullptr;
 int cpuHistoryCount = 0;
 int cpuHistoryCapacity = 0;
