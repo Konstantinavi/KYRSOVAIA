@@ -81,7 +81,23 @@ void RefreshGuiProcessesList() {
     ClearGuiArray();
     EnumWindows(EnumWindowsProc, 0);
 }
+double GetRealDiskUsage(ProcessInfo& proc, unsigned long long currentRead, 
+                        unsigned long long currentWrite, unsigned long long currentTime) {
+    if (proc.lastUpdateTime != 0 && currentTime > proc.lastUpdateTime) {
+        unsigned long long timeDelta = currentTime - proc.lastUpdateTime;
+        unsigned long long readDiff = currentRead - proc.lastReadBytes;
+        unsigned long long writeDiff = currentWrite - proc.lastWriteBytes;
 
+        double speedMBps = (double)(readDiff + writeDiff) / (1048576.0 * (timeDelta / 1000.0));
+
+        proc.lastReadBytes = currentRead;
+        proc.lastWriteBytes = currentWrite;
+        return speedMBps;
+    }
+    proc.lastReadBytes = currentRead;
+    proc.lastWriteBytes = currentWrite;
+    return 0.0;
+}
 int main(){
   retirn 0;
 }
