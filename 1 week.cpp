@@ -77,7 +77,10 @@ BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
     }
     return TRUE;
 }
-
+void RefreshGuiProcessesList() {
+    ClearGuiArray();
+    EnumWindows(EnumWindowsProc, 0);
+}
 
 int main(){
   retirn 0;
