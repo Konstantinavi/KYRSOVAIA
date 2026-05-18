@@ -69,6 +69,16 @@ ProcCat DetectProcessCategory(unsigned long pid, const wchar_t* name) {
     if (IsPidInGuiArray(pid)) return CAT_APP;
     return CAT_BACKGROUND;
 }
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
+    if (IsWindowVisible(hwnd) && GetWindow(hwnd, GW_OWNER) == NULL) {
+        unsigned long pid;
+        GetWindowThreadProcessId(hwnd, &pid);
+        AddPidToGuiArray(pid);
+    }
+    return TRUE;
+}
+
+
 int main(){
   retirn 0;
 }
