@@ -98,6 +98,21 @@ double GetRealDiskUsage(ProcessInfo& proc, unsigned long long currentRead,
     proc.lastWriteBytes = currentWrite;
     return 0.0;
 }
+double GetRealNetworkUsage(ProcessInfo& proc, const IO_COUNTERS& ioCounters, unsigned long long currentTime) {
+    unsigned long long currentNetBytes = ioCounters.OtherTransferCount;
+
+    if (proc.lastUpdateTime != 0 && currentTime > proc.lastUpdateTime) {
+        unsigned long long timeDelta = currentTime - proc.lastUpdateTime;
+        unsigned long long netDiff = currentNetBytes - proc.lastNetBytes;
+
+        double speedMbps = ((double)netDiff * 8.0) / (1000000.0 * (timeDelta / 1000.0));
+
+        proc.lastNetBytes = currentNetBytes;
+        return speedMbps;
+    }
+    proc.lastNetBytes = currentNetBytes;
+    return 0.0;
+}
 int main(){
   retirn 0;
 }
