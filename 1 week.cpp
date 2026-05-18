@@ -60,6 +60,15 @@ double GetProcessCpu(unsigned long pid, unsigned long long curKernel, unsigned l
     }
     return 0.0;
 }
+ProcCat DetectProcessCategory(unsigned long pid, const wchar_t* name) {
+    if (_wcsicmp(name, L"svchost.exe") == 0 || _wcsicmp(name, L"csrss.exe") == 0 ||
+        _wcsicmp(name, L"explorer.exe") == 0 || _wcsicmp(name, L"services.exe") == 0 ||
+        _wcsicmp(name, L"lsass.exe") == 0) {
+        return CAT_WINDOWS;
+    }
+    if (IsPidInGuiArray(pid)) return CAT_APP;
+    return CAT_BACKGROUND;
+}
 int main(){
   retirn 0;
 }
