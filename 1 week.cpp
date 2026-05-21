@@ -1,150 +1,118 @@
 #include "Common.h"
+struct ProcessCpuHistory {
+    unsigned long pid;
+    unsigned long long lastKernel;
+    unsigned long long lastUser;
+};
+struct DiskStats {
+    unsigned long long lastRead;
+    unsigned long long lastWrite;
+    unsigned long long lastTime;
+    bool initialized;
+};
+ProcessCpuHistory* cpuHistory = nullptr;
+int cpuHistoryCount = 0;
+int cpuHistoryCapacity = 0;
 
-long* guiPids = nullptr;
-int guiPidsCapacity = 0;
-int guiPidsCount = 0;
-
-void ClearProcessStrings(ProcessInfo* processList, int count) {
-    if (processList == nullptr) return;
-    for (int i = 0; i < count; i++) {
-        if (processList[i].name != nullptr) {
-            delete[] processList[i].name;
-            processList[i].name = nullptr;
-        }
-        if (processList[i].statusStr != nullptr) {
-            delete[] processList[i].statusStr;
-            processList[i].statusStr = nullptr;
-        }
+int FindPidInCpuHistory(unsigned long pid) {
+    for (int i = 0; i < cpuHistoryCount; i++) {
+        if (cpuHistory[i].pid == pid) return i;
     }
+    return -1;
 }
 
-void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHistoryList,
-    int needed, int& currentCapacity, int& cpuHistoryCapacity) {
-    if (needed <= currentCapacity) return;
-
-    int newCapacity = (currentCapacity == 0) ? 100 : currentCapacity * 2;
-    while (newCapacity < needed) newCapacity *= 2;
-
-    ProcessInfo* newProcessList = nullptr;
-    ProcessCpuTime* newCpuHistory = nullptr;
-
-    try {
-        newProcessList = new ProcessInfo[newCapacity]();
-        newCpuHistory = new ProcessCpuTime[newCapacity]();
+int AddPidToCpuHistory(unsigned long pid) {
+    if (cpuHistoryCount >= cpuHistoryCapacity) {
+        int newCap = (cpuHistoryCapacity == 0) ? 100 : cpuHistoryCapacity * 2;
+        ProcessCpuHistory* newArr = new ProcessCpuHistory[newCap];
+        for (int i = 0; i < cpuHistoryCount; i++) {
+            newArr[i] = cpuHistory[i];
+        }
+        delete[] cpuHistory;
+        cpuHistory = newArr;
+        cpuHistoryCapacity = newCap;
     }
-    catch (const std::bad_alloc&) {
-        delete[] newProcessList; 
-        delete[] newCpuHistory;
+    cpuHistory[cpuHistoryCount].pid = pid;
+    cpuHistory[cpuHistoryCount].lastKernel = 0;
+    cpuHistory[cpuHistoryCount].lastUser = 0;
+    return cpuHistoryCount++;
+}
+double GetProcessCpu(unsigned long pid, unsigned long long curKernel, unsigned long long curUser, unsigned long long sysDelta) {
+    int idx = FindPidInCpuHistory(pid);
+    
+    if (idx != -1) {
+        unsigned long long prevTotal = cpuHistory[idx].lastKernel + cpuHistory[idx].lastUser;
+        unsigned long long curTotal = curKernel + curUser;
         
-        newCapacity = needed;
-        try {
-            newProcessList = new ProcessInfo[newCapacity]();
-            newCpuHistory = new ProcessCpuTime[newCapacity]();
-            std::wcerr << L"ПРЕДУПРЕЖДЕНИЕ: Мало памяти. Выделено впритык: " << newCapacity << std::endl;
-        }
-        catch (const std::bad_alloc& e) {
-            delete[] newProcessList; 
-            delete[] newCpuHistory;
-            std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА! Системная ошибка: " << e.what() << std::endl;
-            exit(1);
+        if (curTotal >= prevTotal && sysDelta > 0) {
+            double percent = (double)((curTotal - prevTotal) * 100) / (double)sysDelta;
+            cpuHistory[idx].lastKernel = curKernel;
+            cpuHistory[idx].lastUser = curUser;
+            return (percent > 100) ? 100 : (percent < 0 ? 0 : percent);
         }
     }
-
-    int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
-    for (int i = 0; i < elementsToCopy; i++) {
-        if (cpuHistoryList != nullptr) {
-            newCpuHistory[i] = cpuHistoryList[i]; 
-        }
-
-        if (processList != nullptr) {
-            newProcessList[i] = processList[i]; 
-            
-            newProcessList[i].name = nullptr;
-            newProcessList[i].statusStr = nullptr;
-
-            if (processList[i].name != nullptr) {
-                int len = static_cast<int>(wcslen(processList[i].name)) + 1;
-                wchar_t* allocatedName = new(std::nothrow) wchar_t[len];
-                if (allocatedName != nullptr) {
-                    wcscpy_s(allocatedName, len, processList[i].name);
-                    newProcessList[i].name = allocatedName;
-                }
-            }
-            
-            if (processList[i].statusStr != nullptr) {
-                int len = static_cast<int>(wcslen(processList[i].statusStr)) + 1;
-                wchar_t* allocatedStatus = new(std::nothrow) wchar_t[len];
-                if (allocatedStatus != nullptr) {
-                    wcscpy_s(allocatedStatus, len, processList[i].statusStr);
-                    newProcessList[i].statusStr = allocatedStatus;
-                }
-            }
+    else {
+        int newIdx = AddPidToCpuHistory(pid);
+        if (newIdx != -1) {
+            cpuHistory[newIdx].lastKernel = curKernel;
+            cpuHistory[newIdx].lastUser = curUser;
         }
     }
-
-    if (processList != nullptr) {
-        for (int i = 0; i < elementsToCopy; i++) {
-            delete[] processList[i].name;
-            delete[] processList[i].statusStr;
-        }
-        delete[] processList;
-    }
-    delete[] cpuHistoryList;
-
-    processList = newProcessList;
-    cpuHistoryList = newCpuHistory;
-    currentCapacity = newCapacity;
-    cpuHistoryCapacity = newCapacity; 
+    return 0.0;
 }
-
-void EnsureGuiPidsCapacity(int needed) {
-    if (needed <= guiPidsCapacity) return;
-
-    int newCapacity = (guiPidsCapacity == 0) ? 100 : guiPidsCapacity * 2;
-    while (newCapacity < needed) newCapacity *= 2;
-
-    long* newArray = nullptr;
-    try {
-        newArray = new long[newCapacity];
+ProcCat DetectProcessCategory(unsigned long pid, const wchar_t* name) {
+    if (_wcsicmp(name, L"svchost.exe") == 0 || _wcsicmp(name, L"csrss.exe") == 0 ||
+        _wcsicmp(name, L"explorer.exe") == 0 || _wcsicmp(name, L"services.exe") == 0 ||
+        _wcsicmp(name, L"lsass.exe") == 0) {
+        return CAT_WINDOWS;
     }
-    catch (const std::bad_alloc&) {
-        newCapacity = needed;
-        try {
-            newArray = new long[newCapacity];
-        }
-        catch (const std::bad_alloc&) {
-            std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА: Недостаточно памяти для GUI PIDs!" << std::endl;
-            exit(1);
-        }
+    if (IsPidInGuiArray(pid)) return CAT_APP;
+    return CAT_BACKGROUND;
+}
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
+    if (IsWindowVisible(hwnd) && GetWindow(hwnd, GW_OWNER) == NULL) {
+        unsigned long pid;
+        GetWindowThreadProcessId(hwnd, &pid);
+        AddPidToGuiArray(pid);
     }
+    return TRUE;
+}
+void RefreshGuiProcessesList() {
+    ClearGuiArray();
+    EnumWindows(EnumWindowsProc, 0);
+}
+double GetRealDiskUsage(ProcessInfo& proc, unsigned long long currentRead, 
+                        unsigned long long currentWrite, unsigned long long currentTime) {
+    if (proc.lastUpdateTime != 0 && currentTime > proc.lastUpdateTime) {
+        unsigned long long timeDelta = currentTime - proc.lastUpdateTime;
+        unsigned long long readDiff = currentRead - proc.lastReadBytes;
+        unsigned long long writeDiff = currentWrite - proc.lastWriteBytes;
 
-    for (int i = 0; i < guiPidsCount; i++) {
-        newArray[i] = guiPids[i];
+        double speedMBps = (double)(readDiff + writeDiff) / (1048576.0 * (timeDelta / 1000.0));
+
+        proc.lastReadBytes = currentRead;
+        proc.lastWriteBytes = currentWrite;
+        return speedMBps;
     }
-
-    delete[] guiPids;
-    guiPids = newArray;
-    guiPidsCapacity = newCapacity;
+    proc.lastReadBytes = currentRead;
+    proc.lastWriteBytes = currentWrite;
+    return 0.0;
 }
+double GetRealNetworkUsage(ProcessInfo& proc, const IO_COUNTERS& ioCounters, unsigned long long currentTime) {
+    unsigned long long currentNetBytes = ioCounters.OtherTransferCount;
 
-void AddPidToGuiArray(long pid) {
-    for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return;
-    EnsureGuiPidsCapacity(guiPidsCount + 1);
-    guiPids[guiPidsCount++] = pid;
+    if (proc.lastUpdateTime != 0 && currentTime > proc.lastUpdateTime) {
+        unsigned long long timeDelta = currentTime - proc.lastUpdateTime;
+        unsigned long long netDiff = currentNetBytes - proc.lastNetBytes;
+
+        double speedMbps = ((double)netDiff * 8.0) / (1000000.0 * (timeDelta / 1000.0));
+
+        proc.lastNetBytes = currentNetBytes;
+        return speedMbps;
+    }
+    proc.lastNetBytes = currentNetBytes;
+    return 0.0;
 }
-
-bool IsPidInGuiArray(long pid) {
-    for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return true;
-    return false;
-}
-
-void ClearGuiArray() {
-    delete[] guiPids;
-    guiPids = nullptr;
-    guiPidsCount = 0;
-    guiPidsCapacity = 0;
-}
-
-int main() {
-    return 0;
+int main(){
+  retirn 0;
 }
