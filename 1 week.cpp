@@ -1,6 +1,6 @@
 #include "Common.h"
 
-unsigned long* guiPids = nullptr;
+long* guiPids = nullptr;
 int guiPidsCapacity = 0;
 int guiPidsCount = 0;
 
@@ -19,7 +19,7 @@ void ClearProcessStrings(ProcessInfo* processList, int count) {
 }
 
 void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHistoryList,
-    int needed, int& currentCapacity) {
+    int needed, int& currentCapacity, int& cpuHistoryCapacity) {
     if (needed <= currentCapacity) return;
 
     int newCapacity = (currentCapacity == 0) ? 100 : currentCapacity * 2;
@@ -50,7 +50,7 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
         }
     }
 
-        int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
+    int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
     for (int i = 0; i < elementsToCopy; i++) {
         if (cpuHistoryList != nullptr) {
             newCpuHistory[i] = cpuHistoryList[i]; 
@@ -63,7 +63,7 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
             newProcessList[i].statusStr = nullptr;
 
             if (processList[i].name != nullptr) {
-                size_t len = wcslen(processList[i].name) + 1;
+                int len = static_cast<int>(wcslen(processList[i].name)) + 1;
                 wchar_t* allocatedName = new(std::nothrow) wchar_t[len];
                 if (allocatedName != nullptr) {
                     wcscpy_s(allocatedName, len, processList[i].name);
@@ -72,7 +72,7 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
             }
             
             if (processList[i].statusStr != nullptr) {
-                size_t len = wcslen(processList[i].statusStr) + 1;
+                int len = static_cast<int>(wcslen(processList[i].statusStr)) + 1;
                 wchar_t* allocatedStatus = new(std::nothrow) wchar_t[len];
                 if (allocatedStatus != nullptr) {
                     wcscpy_s(allocatedStatus, len, processList[i].statusStr);
@@ -103,14 +103,14 @@ void EnsureGuiPidsCapacity(int needed) {
     int newCapacity = (guiPidsCapacity == 0) ? 100 : guiPidsCapacity * 2;
     while (newCapacity < needed) newCapacity *= 2;
 
-    unsigned long* newArray = nullptr;
+    long* newArray = nullptr;
     try {
-        newArray = new unsigned long[newCapacity];
+        newArray = new long[newCapacity];
     }
     catch (const std::bad_alloc&) {
         newCapacity = needed;
         try {
-            newArray = new unsigned long[newCapacity];
+            newArray = new long[newCapacity];
         }
         catch (const std::bad_alloc&) {
             std::wcerr << L"КРИТИЧЕСКАЯ ОШИБКА: Недостаточно памяти для GUI PIDs!" << std::endl;
@@ -127,13 +127,13 @@ void EnsureGuiPidsCapacity(int needed) {
     guiPidsCapacity = newCapacity;
 }
 
-void AddPidToGuiArray(unsigned long pid) {
+void AddPidToGuiArray(long pid) {
     for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return;
     EnsureGuiPidsCapacity(guiPidsCount + 1);
     guiPids[guiPidsCount++] = pid;
 }
 
-bool IsPidInGuiArray(unsigned long pid) {
+bool IsPidInGuiArray(long pid) {
     for (int i = 0; i < guiPidsCount; i++) if (guiPids[i] == pid) return true;
     return false;
 }
@@ -146,5 +146,5 @@ void ClearGuiArray() {
 }
 
 int main() {
-  return 0;
+    return 0;
 }
