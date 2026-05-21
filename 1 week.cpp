@@ -50,7 +50,7 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
         }
     }
 
-    int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
+        int elementsToCopy = (currentCapacity < needed) ? currentCapacity : needed;
     for (int i = 0; i < elementsToCopy; i++) {
         if (cpuHistoryList != nullptr) {
             newCpuHistory[i] = cpuHistoryList[i]; 
@@ -64,13 +64,20 @@ void EnsureProcessesCapacity(ProcessInfo*& processList, ProcessCpuTime*& cpuHist
 
             if (processList[i].name != nullptr) {
                 size_t len = wcslen(processList[i].name) + 1;
-                newProcessList[i].name = new(std::nothrow) wchar_t[len];
-                if (newProcessList[i].name) wcscpy_s(newProcessList[i].name, len, processList[i].name);
+                wchar_t* allocatedName = new(std::nothrow) wchar_t[len];
+                if (allocatedName != nullptr) {
+                    wcscpy_s(allocatedName, len, processList[i].name);
+                    newProcessList[i].name = allocatedName;
+                }
             }
+            
             if (processList[i].statusStr != nullptr) {
                 size_t len = wcslen(processList[i].statusStr) + 1;
-                newProcessList[i].statusStr = new(std::nothrow) wchar_t[len];
-                if (newProcessList[i].statusStr) wcscpy_s(newProcessList[i].statusStr, len, processList[i].statusStr);
+                wchar_t* allocatedStatus = new(std::nothrow) wchar_t[len];
+                if (allocatedStatus != nullptr) {
+                    wcscpy_s(allocatedStatus, len, processList[i].statusStr);
+                    newProcessList[i].statusStr = allocatedStatus;
+                }
             }
         }
     }
